@@ -54,7 +54,14 @@ func CreatePools(urlStr string) (*radix.Pool, *radix.Pool, error) {
 		}
 		connFunc := radix.PoolConnFunc(func(network, _ string) (conn radix.Conn, e error) {
 			primary, _ := sentinel.Addrs()
-			return radix.DefaultConnFunc(network, primary)
+			// lets build the URL, this is nessecary because `Addrs` will return us the ip:port without the user
+			// credential information.
+			user := ""
+			if parsedUrl.User != nil {
+				user = parsedUrl.User.String() + "@"
+			}
+			reformattedUrl := fmt.Sprintf("redis://%s%s", user, primary)
+			return radix.DefaultConnFunc(network, reformattedUrl)
 		})
 		writePool, err := radix.NewPool("tcp", urlStr, poolSize, connFunc)
 		if err != nil {
